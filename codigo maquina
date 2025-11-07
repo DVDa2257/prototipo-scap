@@ -116,7 +116,7 @@ void setup() {
   }
   
   // ===== ETHERNET =====
-  Serial.print("🌐 Ethernet W5500... ");
+  Serial.print(" Ethernet W5500... ");
   pinMode(RST_PIN_ETH, OUTPUT);
   digitalWrite(RST_PIN_ETH, LOW);
   delay(10);
@@ -134,7 +134,7 @@ void setup() {
   }
   
   // ===== BLE =====
-  Serial.print("📱 Bluetooth BLE... ");
+  Serial.print(" Bluetooth BLE... ");
   BLEDevice::init("DemoMaquina");
   Serial.println("OK");
   
@@ -148,7 +148,7 @@ void setup() {
   Serial.println("\n╔════════════════════════════════════╗");
   Serial.println("║  ✅ SISTEMA PRONTO!                ║");
   Serial.println("║                                    ║");
-  Serial.println("║  👉 Aproxime um cartão RFID        ║");
+  Serial.println("║   Aproxime um cartão RFID        ║");
   Serial.println("╚════════════════════════════════════╝\n");
 }
 
@@ -165,7 +165,7 @@ void loop() {
     uid.toUpperCase();
     
     Serial.println("\n" + String('─', 40));
-    Serial.printf("🆔 CARTÃO: %s\n", uid.c_str());
+    Serial.printf(" CARTÃO: %s\n", uid.c_str());
     
     // Verificar autorização
     bool autorizado = false;
@@ -225,7 +225,7 @@ void loop() {
         else if (rssi > RSSI_LIMITE) status = "⚠️  DISTANTE";
         else status = "🚨 CRÍTICO";
         
-        Serial.printf("📊 RSSI: %d dBm | Status: %s\n", rssi, status.c_str());
+        Serial.printf(" RSSI: %d dBm | Status: %s\n", rssi, status.c_str());
         
         // Piscar verde = monitorando
         setLED(false, false);
@@ -246,7 +246,7 @@ void loop() {
     
     // Timeout 5 minutos
     if (millis() - inicioSessao > 300000) {
-      Serial.println("\n⏰ Timeout de sessão");
+      Serial.println("\n Timeout de sessão");
       pararMaquina("TIMEOUT");
     }
   }
@@ -274,7 +274,7 @@ bool procurarBLE() {
                   device.getRSSI());
     
     if (device.getName() == CARD_BLE_NAME) {
-      Serial.println("\n🎯 Cartão encontrado!");
+      Serial.println("\n Cartão encontrado!");
       
       bleClient = BLEDevice::createClient();
       bleClient->setClientCallbacks(new ClientCallback());
