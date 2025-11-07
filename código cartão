@@ -1,0 +1,141 @@
+/*
+===============================================================================
+  DEMO APRESENTAÇÃO - CARTÃO BLE
+  
+  VERSÃO SIMPLIFICADA
+  
+  Função: Anunciar presença via BLE para a máquina detectar
+  
+  Alimentação: USB (para demo)
+  Futuro: Bateria LiPo + TP4056
+===============================================================================
+*/
+
+#include "BLEDevice.h"
+#include "BLEServer.h"
+
+// ===== CONFIGURAÇÕES =====
+#define DEVICE_NAME     "CartaoAcesso"
+#define LED_PIN         8  // LED verde (se tiver)
+
+// UUIDs
+#define SERVICE_UUID        "12345678-1234-5678-9abc-123456789abc"
+#define CHARACTERISTIC_UUID "87654321-4321-8765-cba9-987654321abc"
+
+// ===== VARIÁVEIS =====
+BLEServer* pServer = NULL;
+BLECharacteristic* pCharacteristic = NULL;
+bool deviceConnected = false;
+unsigned long tempoConexao = 0;
+
+// ===== CALLBACK =====
+class ServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+    tempoConexao = millis();
+    
+    Serial.println("\n🔗 CONECTADO à máquina!");
+    Serial.println("   Sistema ativo - monitorando...");
+    
+    digitalWrite(LED_PIN, LOW); // LED aceso
+  }
+
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+    
+    Serial.println("\n❌ DESCONECTADO da máquina");
+    Serial.println("   Aguardando nova conexão...\n");
+    
+    digitalWrite(LED_PIN, HIGH); // LED apagado
+    
+    // Reiniciar advertising
+    delay(500);
+    pServer->startAdvertising();
+  }
+};
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  
+  Serial.println("\n╔════════════════════════════════════╗");
+  Serial.println("║  CARTÃO BLE - DEMO                 ║");
+  Serial.println("╚════════════════════════════════════╝\n");
+  
+  // Configurar LED
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH); // Apagado
+  
+  Serial.println("⚙️  Inicializando BLE...");
+  
+  // Inicializar BLE
+  BLEDevice::init(DEVICE_NAME);
+  
+  // Criar servidor
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new ServerCallbacks());
+  
+  // Criar serviço
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  
+  // Criar característica
+  pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      BLECharacteristic::PROPERTY_READ |
+                      BLECharacteristic::PROPERTY_NOTIFY
+                    );
+  
+  pCharacteristic->setValue("CartaoDemo");
+  
+  // Iniciar serviço
+  pService->start();
+  
+  // Configurar advertising
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(false);
+  
+  // Iniciar advertising
+  BLEDevice::startAdvertising();
+  
+  Serial.println("\n╔════════════════════════════════════╗");
+  Serial.println("║  ✅ CARTÃO ATIVO!                  ║");
+  Serial.println("║                                    ║");
+  Serial.println("║  📡 Anunciando via BLE...          ║");
+  Serial.println("║  👉 Aproxime cartão RFID na        ║");
+  Serial.println("║     máquina para conectar          ║");
+  Serial.println("╚════════════════════════════════════╝\n");
+}
+
+void loop() {
+  // Se conectado, enviar dados periodicamente
+  if (deviceConnected) {
+    static unsigned long ultimoEnvio = 0;
+    
+    if (millis() - ultimoEnvio > 3000) {
+      ultimoEnvio = millis();
+      
+      unsigned long tempoSessao = (millis() - tempoConexao) / 1000;
+      
+      String dados = "ATIVO|" + String(tempoSessao) + "s";
+      pCharacteristic->setValue(dados.c_str());
+      pCharacteristic->notify();
+      
+      Serial.printf("📤 Enviado: %s\n", dados.c_str());
+      
+      // Piscar LED
+      digitalWrite(LED_PIN, HIGH);
+      delay(50);
+      digitalWrite(LED_PIN, LOW);
+    }
+  } else {
+    // Piscar lento quando desconectado
+    static unsigned long ultimoPisca = 0;
+    if (millis() - ultimoPisca > 2000) {
+      ultimoPisca = millis();
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+    }
+  }
+  
+  delay(100);
+}
